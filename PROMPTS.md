@@ -62,3 +62,26 @@ I created `tests/test_login.py` and tested successful login, incorrect password,
 
 ### 6. Commit Link
 To be added after creating the Git commit.
+
+
+## Entry 3: Day 2 - Role-Based Security
+**Date:** 2026-11-05
+
+### 1. Prompt Summary
+I asked AI to help implement Admin, Owner, and Viewer roles securely.
+
+### 2. AI Output
+AI helped me add role constants, a default viewer role, and a database constraint to allow only valid roles.
+
+### 3. Problem Identified
+The database needed protection against invalid user roles.
+
+### 4. My Fix
+I updated the User model with role restrictions and created automated tests for valid and invalid roles.
+
+### 5. Testing
+- 2 role tests passed.
+- All 19 project tests passed.
+
+### 6. Commit Link
+To be added after creating the Git commit.
