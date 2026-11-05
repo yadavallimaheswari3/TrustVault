@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Login - TrustVault{% endblock %}
+
+{% macro show_errors(field) %}
+    {% for error in field.errors %}
+        <p class="field-error">{{ error }}</p>
+    {% endfor %}
+{% endmacro %}
+
+{% block content %}
+    <h2>Login to TrustVault</h2>
+
+    <form method="POST" action="{{ url_for('auth.login') }}">
+        {{ form.hidden_tag() }}
+
+        <div class="form-group">
+            {{ form.email.label }}
+            {{ form.email(autocomplete="email") }}
+            {{ show_errors(form.email) }}
+        </div>
+
+        <div class="form-group">
+            {{ form.password.label }}
+            {{ form.password(autocomplete="current-password") }}
+            {{ show_errors(form.password) }}
+        </div>
+
+        {{ form.submit() }}
+    </form>
+{% endblock %}

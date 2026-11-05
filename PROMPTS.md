@@ -35,3 +35,30 @@ AI helped me create:
 
 ### 6. Commit Link
 To be added after creating the Git commit.
+
+
+## Entry 2: Day 2 - Login and Logout Testing
+**Date:** 2026-11-05
+
+### 1. Prompt Summary
+I asked AI to guide me in adding login and logout functionality and creating automated tests.
+
+### 2. AI Output
+AI helped me create:
+- Login form and login route.
+- Login page.
+- Logout route using POST.
+- Automated tests for login and logout.
+
+### 3. Problem Identified
+Login and logout functionality did not have separate automated tests.
+
+### 4. My Fix
+I created `tests/test_login.py` and tested successful login, incorrect password, and logout.
+
+### 5. Testing
+- 3 login/logout tests passed.
+- All 17 project tests passed.
+
+### 6. Commit Link
+To be added after creating the Git commit.
