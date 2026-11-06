@@ -1,3 +1,4 @@
+import io
 from app.models import AuditLog
 import secrets
 from pathlib import Path
@@ -178,3 +179,203 @@ def test_authorized_download_is_audited(document_client):
 
         assert log is not None
         assert log.outcome == "allowed"
+
+
+def test_owner_can_upload_document(document_client):
+    client, document_id, owner_id, viewer_id, outsider_id = document_client
+
+    with client:
+        client.post(
+            "/login",
+            data={
+                "email": "owner@example.com",
+                "password": "Password123",
+            },
+        )
+
+        response = client.post(
+            "/documents/upload",
+            data={
+                "file": (
+                    io.BytesIO(b"New secure document"),
+                    "new-report.txt",
+                ),
+                "category": "Reports",
+            },
+            content_type="multipart/form-data",
+        )
+
+        assert response.status_code == 201
+        assert response.json["message"] == "Document uploaded successfully"
+
+        with client.application.app_context():
+            document = Document.query.filter_by(
+                id=response.json["document_id"]
+            ).first()
+
+            assert document is not None
+            assert document.owner_id == owner_id
+            assert document.category == "Reports"
+            assert Path(
+                client.application.config["UPLOAD_FOLDER"],
+                document.storage_key,
+            ).exists()
+
+
+def test_viewer_cannot_upload_document(document_client):
+    client, document_id, owner_id, viewer_id, outsider_id = document_client
+
+    with client:
+        client.post(
+            "/login",
+            data={
+                "email": "viewer@example.com",
+                "password": "Password123",
+            },
+        )
+
+        response = client.post(
+            "/documents/upload",
+            data={
+                "file": (
+                    io.BytesIO(b"Unauthorized file"),
+                    "test.txt",
+                ),
+            },
+            content_type="multipart/form-data",
+        )
+
+        assert response.status_code == 403
+
+        with client.application.app_context():
+            log = AuditLog.query.filter_by(
+                actor_id=viewer_id,
+                action="upload",
+                outcome="denied",
+            ).first()
+
+            assert log is not None
+
+
+def test_upload_rejects_invalid_file_type(document_client):
+    client, document_id, owner_id, viewer_id, outsider_id = document_client
+
+    with client:
+        client.post(
+            "/login",
+            data={
+                "email": "owner@example.com",
+                "password": "Password123",
+            },
+        )
+
+        response = client.post(
+            "/documents/upload",
+            data={
+                "file": (
+                    io.BytesIO(b"Invalid file"),
+                    "malware.exe",
+                ),
+            },
+            content_type="multipart/form-data",
+        )
+
+        assert response.status_code == 400
+
+
+def test_upload_rejects_files_over_10_mb(document_client):
+    client, document_id, owner_id, viewer_id, outsider_id = document_client
+
+    with client:
+        client.post(
+            "/login",
+            data={
+                "email": "owner@example.com",
+                "password": "Password123",
+            },
+        )
+
+        response = client.post(
+            "/documents/upload",
+            data={
+                "file": (
+                    io.BytesIO(b"A" * (10 * 1024 * 1024 + 1)),
+                    "large-report.txt",
+                ),
+            },
+            content_type="multipart/form-data",
+        )
+
+        assert response.status_code == 413
+
+def test_successful_upload_is_audited(document_client):
+    client, document_id, owner_id, viewer_id, outsider_id = document_client
+
+    with client:
+        client.post(
+            "/login",
+            data={
+                "email": "owner@example.com",
+                "password": "Password123",
+            },
+        )
+
+        response = client.post(
+            "/documents/upload",
+            data={
+                "file": (
+                    io.BytesIO(b"Audit test document"),
+                    "audit-report.txt",
+                ),
+            },
+            content_type="multipart/form-data",
+        )
+
+        assert response.status_code == 201
+
+        with client.application.app_context():
+            log = AuditLog.query.filter_by(
+                actor_id=owner_id,
+                document_id=response.json["document_id"],
+                action="upload",
+                outcome="allowed",
+            ).first()
+
+            assert log is not None
+
+
+def test_revoked_viewer_cannot_download_document(document_client):
+    client, document_id, owner_id, viewer_id, outsider_id = document_client
+
+    with client:
+        # Owner revokes viewer's permission.
+        client.post(
+            "/login",
+            data={
+                "email": "owner@example.com",
+                "password": "Password123",
+            },
+        )
+
+        revoke_response = client.delete(
+            f"/documents/{document_id}/permissions/{viewer_id}"
+        )
+
+        assert revoke_response.status_code == 200
+
+        # Viewer tries to download after revocation.
+        client.post("/logout")
+
+        client.post(
+            "/login",
+            data={
+                "email": "viewer@example.com",
+                "password": "Password123",
+            },
+        )
+
+        response = client.get(
+            f"/documents/{document_id}/download"
+        )
+
+        assert response.status_code == 403
