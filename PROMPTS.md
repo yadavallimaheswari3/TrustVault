@@ -119,3 +119,37 @@ AI helped me:
 
 ### 6. Commit Link
 To be added after creating the Git commit.
+
+
+
+## Entry 5: Day 3 - Document Search and Access-Control Testing
+
+**Date:** 2026-11-06
+
+### 1. Prompt Summary
+I asked AI to help implement document search with filters for document name, owner email, category, and upload date. I also wanted to ensure that users could only see documents they were authorized to access.
+
+### 2. AI Output
+AI helped me:
+- Create a document search route using GET.
+- Add filters for document name, owner email, category, and upload date.
+- Check document-view permissions before including a document in search results.
+- Create automated tests for search functionality and access control.
+
+### 3. Problems Identified
+
+**Problem 1:** Search results must not expose private documents belonging to other users.
+
+**Problem 2:** Search filters must return the correct documents when multiple filters are used together.
+
+### 4. My Fix
+- Added an access-permission check before returning each search result.
+- Added a test to verify that document name, owner, category, and date filters work together.
+- Added a security test to verify that a viewer cannot find an unshared private document.
+
+### 5. Testing
+- All 13 document-route tests passed.
+- All 44 project tests passed.
+
+### 6. Commit Link
+To be added after creating the Git commit.

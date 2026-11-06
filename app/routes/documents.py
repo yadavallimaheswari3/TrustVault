@@ -1,4 +1,4 @@
-
+from datetime import date
 from pathlib import Path
 import uuid
 
@@ -147,3 +147,54 @@ def download_document(document_id):
         as_attachment=True,
         download_name=document.original_filename,
     )
+@documents_bp.route("/documents/search", methods=["GET"])
+@login_required
+def search_documents():
+    name = request.args.get("name", "").strip().lower()
+    owner_email = request.args.get("owner", "").strip().lower()
+    category = request.args.get("category", "").strip().lower()
+    date_filter = request.args.get("date", "").strip()
+
+    search_date = None
+
+    if date_filter:
+        try:
+            search_date = date.fromisoformat(date_filter)
+        except ValueError:
+            return jsonify({"error": "Date must be YYYY-MM-DD"}), 400
+
+    documents = Document.query.order_by(
+        Document.uploaded_at.desc()
+    ).all()
+
+    results = []
+
+    for document in documents:
+        if not can_view_document(current_user, document):
+            continue
+
+        if name and name not in document.original_filename.lower():
+            continue
+
+        if owner_email and owner_email not in document.owner.email.lower():
+            continue
+
+        if category and category not in (document.category or "").lower():
+            continue
+
+        if search_date and document.uploaded_at.date() != search_date:
+            continue
+
+        results.append({
+            "id": document.id,
+            "name": document.original_filename,
+            "owner": document.owner.email,
+            "category": document.category,
+            "uploaded_at": document.uploaded_at.isoformat(),
+            "file_size": document.file_size,
+        })
+
+    return jsonify({
+        "count": len(results),
+        "documents": results,
+    }), 200

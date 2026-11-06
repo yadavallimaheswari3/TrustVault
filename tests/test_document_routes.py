@@ -379,3 +379,76 @@ def test_revoked_viewer_cannot_download_document(document_client):
         )
 
         assert response.status_code == 403
+def test_owner_can_search_documents_by_name_category_and_date(document_client):
+    client, document_id, owner_id, viewer_id, outsider_id = document_client
+
+    with client.application.app_context():
+        document = Document(
+            owner_id=owner_id,
+            original_filename="budget-report.pdf",
+            storage_key="budget-report-123",
+            category="Finance",
+            file_size=100,
+        )
+        db.session.add(document)
+        db.session.commit()
+
+        search_date = document.uploaded_at.date().isoformat()
+
+    with client:
+        client.post(
+            "/login",
+            data={
+                "email": "owner@example.com",
+                "password": "Password123",
+            },
+        )
+
+        response = client.get(
+            "/documents/search",
+            query_string={
+                "name": "budget",
+                "owner": "owner@example.com",
+                "category": "Finance",
+                "date": search_date,
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json["count"] == 1
+        assert response.json["documents"][0]["name"] == "budget-report.pdf"
+
+
+def test_viewer_search_cannot_show_unshared_documents(document_client):
+    client, document_id, owner_id, viewer_id, outsider_id = document_client
+
+    with client.application.app_context():
+        private_document = Document(
+            owner_id=owner_id,
+            original_filename="private-report.pdf",
+            storage_key="private-report-123",
+            category="Confidential",
+            file_size=100,
+        )
+        db.session.add(private_document)
+        db.session.commit()
+
+    with client:
+        client.post(
+            "/login",
+            data={
+                "email": "viewer@example.com",
+                "password": "Password123",
+            },
+        )
+
+        response = client.get("/documents/search")
+
+        assert response.status_code == 200
+
+        document_names = [
+            item["name"] for item in response.json["documents"]
+        ]
+
+        assert "report.txt" in document_names
+        assert "private-report.pdf" not in document_names
