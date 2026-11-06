@@ -85,3 +85,37 @@ I updated the User model with role restrictions and created automated tests for 
 
 ### 6. Commit Link
 To be added after creating the Git commit.
+
+
+## Entry 4: Day 3 - Document Model and Ownership Validation
+
+**Date:** 2026-11-06
+
+### 1. Prompt Summary
+I asked AI to guide me step by step in creating a Document database model and testing document ownership in TrustVault.
+
+### 2. AI Output
+AI helped me:
+- Create a Document model using SQLAlchemy.
+- Add document fields such as owner ID, original filename, storage key, category, file size and upload date.
+- Establish a relationship between the Document and User models.
+- Generate and apply a database migration.
+- Write automated tests to validate document ownership.
+
+### 3. Problems Identified
+
+**Problem 1:** A document should not be saved without an owner.
+
+**Problem 2:** I needed to verify that a document was correctly linked to its actual owner.
+
+### 4. My Fix
+- Added a test to verify that the database rejects a document without an owner.
+- Added a test to verify that a saved document is linked to the correct user.
+- Applied the database migration to create the documents table.
+
+### 5. Testing
+- All 4 role and document ownership tests passed.
+- All 21 project tests passed.
+
+### 6. Commit Link
+To be added after creating the Git commit.

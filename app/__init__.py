@@ -1,4 +1,3 @@
-
 from flask import Flask
 
 from app.config import get_default_config
@@ -28,8 +27,12 @@ def create_app(test_config=None):
     from app import models
     from app.routes.main import main_bp
     from app.routes.auth import auth_bp
+    from app.routes.documents import documents_bp
+    from app.routes.permissions import permissions_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(documents_bp)
+    app.register_blueprint(permissions_bp)
 
     return app
