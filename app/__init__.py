@@ -22,7 +22,7 @@ def create_app(test_config=None):
     csrf.init_app(app)
     migrate.init_app(app, db)
 
-    login_manager.login_view = "main.index"
+    login_manager.login_view = "auth.login"
 
     from app import models
     from app.routes.main import main_bp

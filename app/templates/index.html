@@ -3,7 +3,20 @@
 {% block title %}Home - TrustVault{% endblock %}
 
 {% block content %}
-    <h2>Welcome to TrustVault</h2>
-    <p>Secure document sharing with a real audit trail.</p>
-    <p>The application is running. Features will be added step by step.</p>
+<h2>Welcome to TrustVault</h2>
+
+<h3>Your Accessible Documents</h3>
+
+{% if documents %}
+    <ul>
+        {% for document in documents %}
+            <li>
+                {{ document.original_filename }}
+                - {{ document.category or "Uncategorized" }}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No documents available yet.</p>
+{% endif %}
 {% endblock %}

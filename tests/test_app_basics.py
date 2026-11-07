@@ -3,12 +3,11 @@ from pathlib import Path
 from app import create_app
 
 
-def test_home_page_loads(client):
+def test_home_page_requires_login(client):
     response = client.get("/")
 
-    assert response.status_code == 200
-    assert b"Welcome to TrustVault" in response.data
-
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
 
 def test_health_endpoint(client):
     response = client.get("/health")
