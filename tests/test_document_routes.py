@@ -452,3 +452,87 @@ def test_viewer_search_cannot_show_unshared_documents(document_client):
 
         assert "report.txt" in document_names
         assert "private-report.pdf" not in document_names
+def test_owner_can_edit_document(document_client):
+    client, document_id, owner_id, viewer_id, outsider_id = document_client
+
+    with client:
+        client.post(
+            "/login",
+            data={
+                "email": "owner@example.com",
+                "password": "Password123",
+            },
+        )
+
+        response = client.patch(
+            f"/documents/{document_id}",
+            json={
+                "name": "updated-report.txt",
+                "category": "Finance",
+            },
+        )
+
+        assert response.status_code == 200
+
+        with client.application.app_context():
+            document = db.session.get(Document, document_id)
+            assert document.original_filename == "updated-report.txt"
+            assert document.category == "Finance"
+
+
+def test_viewer_without_edit_permission_cannot_edit(document_client):
+    client, document_id, owner_id, viewer_id, outsider_id = document_client
+
+    with client:
+        client.post(
+            "/login",
+            data={
+                "email": "viewer@example.com",
+                "password": "Password123",
+            },
+        )
+
+        response = client.patch(
+            f"/documents/{document_id}",
+            json={"name": "hacked.txt"},
+        )
+
+        assert response.status_code == 403
+
+        with client.application.app_context():
+            document = db.session.get(Document, document_id)
+            assert document.original_filename == "report.txt"
+
+
+def test_owner_can_delete_document_and_file(document_client):
+    client, document_id, owner_id, viewer_id, outsider_id = document_client
+
+    with client:
+        client.post(
+            "/login",
+            data={
+                "email": "owner@example.com",
+                "password": "Password123",
+            },
+        )
+
+        response = client.delete(f"/documents/{document_id}")
+
+        assert response.status_code == 200
+
+        with client.application.app_context():
+            assert db.session.get(Document, document_id) is None
+
+            log = AuditLog.query.filter_by(
+                actor_id=owner_id,
+                action="delete",
+                outcome="allowed",
+            ).first()
+
+            assert log is not None
+            assert log.document_id is None
+
+        assert not Path(
+            client.application.config["UPLOAD_FOLDER"],
+            "secure-report-123",
+        ).exists()

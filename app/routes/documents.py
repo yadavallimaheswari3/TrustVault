@@ -1,3 +1,4 @@
+
 from datetime import date
 from pathlib import Path
 import uuid
@@ -14,8 +15,8 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
 from app.extensions import db
-from app.models import Document, User
-from app.permissions import can_view_document
+from app.models import Document, DocumentPermission, User
+from app.permissions import can_view_document, can_edit_document
 from app.audit import record_audit_event
 
 documents_bp = Blueprint("documents", __name__)
@@ -147,6 +148,8 @@ def download_document(document_id):
         as_attachment=True,
         download_name=document.original_filename,
     )
+
+
 @documents_bp.route("/documents/search", methods=["GET"])
 @login_required
 def search_documents():
@@ -198,3 +201,132 @@ def search_documents():
         "count": len(results),
         "documents": results,
     }), 200
+
+
+@documents_bp.route(
+    "/documents/<int:document_id>",
+    methods=["PATCH"],
+)
+@login_required
+def edit_document(document_id):
+    document = db.session.get(Document, document_id)
+
+    if document is None:
+        record_audit_event(
+            action="edit",
+            outcome="denied",
+            document_id=document_id,
+            details="Document not found",
+        )
+        return jsonify({"error": "Document not found"}), 404
+
+    if not can_edit_document(current_user, document):
+        record_audit_event(
+            action="edit",
+            outcome="denied",
+            document_id=document.id,
+            details="User does not have edit permission",
+        )
+        return jsonify({"error": "Permission denied"}), 403
+
+    data = request.get_json(silent=True) or {}
+
+    new_name = data.get("name")
+    new_category = data.get("category")
+
+    if new_name is None and new_category is None:
+        return jsonify({"error": "No changes provided"}), 400
+
+    if new_name is not None:
+        if not isinstance(new_name, str):
+            return jsonify({"error": "Invalid document name"}), 400
+
+        new_name = secure_filename(new_name)
+
+        if not new_name or len(new_name) > 255:
+            return jsonify({"error": "Invalid document name"}), 400
+
+        document.original_filename = new_name
+
+    if new_category is not None:
+        if not isinstance(new_category, str):
+            return jsonify({"error": "Invalid category"}), 400
+
+        new_category = new_category.strip()
+
+        if len(new_category) > 100:
+            return jsonify({"error": "Category is too long"}), 400
+
+        document.category = new_category or None
+
+    db.session.commit()
+
+    record_audit_event(
+        action="edit",
+        outcome="allowed",
+        document_id=document.id,
+        details="Document details updated",
+    )
+
+    return jsonify({"message": "Document updated successfully"}), 200
+
+
+@documents_bp.route(
+    "/documents/<int:document_id>",
+    methods=["DELETE"],
+)
+@login_required
+def delete_document(document_id):
+    document = db.session.get(Document, document_id)
+
+    if document is None:
+        record_audit_event(
+            action="delete",
+            outcome="denied",
+            document_id=document_id,
+            details="Document not found",
+        )
+        return jsonify({"error": "Document not found"}), 404
+
+    if document.owner_id != current_user.id:
+        record_audit_event(
+            action="delete",
+            outcome="denied",
+            document_id=document.id,
+            details="Only the owner can delete documents",
+        )
+        return jsonify({
+            "error": "Only the owner can delete documents"
+        }), 403
+
+    file_path = (
+        Path(current_app.config["UPLOAD_FOLDER"])
+        / document.storage_key
+    )
+
+    try:
+        if file_path.exists():
+            file_path.unlink()
+            DocumentPermission.query.filter_by(
+            document_id=document.id
+        ).delete(synchronize_session=False)
+
+        db.session.delete(document)
+        db.session.commit()
+
+
+    except Exception:
+        db.session.rollback()
+        raise
+
+    record_audit_event(
+        action="delete",
+        outcome="allowed",
+        document_id=None,
+        details=f"Document {document.id} deleted by owner",
+    )
+
+    return jsonify({
+        "message": "Document deleted successfully"
+    }), 200
+
