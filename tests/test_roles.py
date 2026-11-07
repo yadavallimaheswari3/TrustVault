@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import create_app
 from app.extensions import db
-from app.models import User, Document, DocumentPermission
+from app.models import User, Document, DocumentPermission, AuditLog
 
 
 @pytest.fixture
@@ -279,3 +279,80 @@ def test_document_access_permissions(role_app):
         assert can_edit_document(outsider, document) is False
         assert can_view_document(admin, document) is False
         assert can_edit_document(admin, document) is False
+def test_admin_can_view_audit_logs(role_app):
+    with role_app.app_context():
+        admin = User(
+            email="admin@example.com",
+            password_hash="test_hash",
+            role="admin",
+        )
+        db.session.add(admin)
+        db.session.commit()
+
+        log = AuditLog(
+            actor_id=admin.id,
+            action="document_upload",
+            outcome="allowed",
+            details="Test upload",
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        admin_id = admin.id
+
+    client = role_app.test_client()
+
+    with client.session_transaction() as session:
+        session["_user_id"] = str(admin_id)
+        session["_fresh"] = True
+
+    response = client.get("/admin/audit-logs")
+
+    assert response.status_code == 200
+    assert response.json["count"] == 1
+
+
+def test_normal_user_cannot_view_audit_logs(role_app):
+    with role_app.app_context():
+        user = User(
+            email="viewer@example.com",
+            password_hash="test_hash",
+            role="viewer",
+        )
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+
+    client = role_app.test_client()
+
+    with client.session_transaction() as session:
+        session["_user_id"] = str(user_id)
+        session["_fresh"] = True
+
+    response = client.get("/admin/audit-logs")
+
+    assert response.status_code == 403
+
+
+def test_invalid_audit_log_outcome_is_rejected(role_app):
+    with role_app.app_context():
+        admin = User(
+            email="admin2@example.com",
+            password_hash="test_hash",
+            role="admin",
+        )
+        db.session.add(admin)
+        db.session.commit()
+        admin_id = admin.id
+
+    client = role_app.test_client()
+
+    with client.session_transaction() as session:
+        session["_user_id"] = str(admin_id)
+        session["_fresh"] = True
+
+    response = client.get(
+        "/admin/audit-logs?outcome=invalid"
+    )
+
+    assert response.status_code == 400
