@@ -155,39 +155,42 @@ AI helped me:
 To be added after creating the Git commit.
 
 
-## Entry 6: Day 5 - Admin Audit Logs and Security Testing
+
+
+## Entry 7: Day 5 - Secure Document Dashboard
 
 **Date:** 2026-11-07
 
 ### 1. Prompt Summary
-I asked AI to guide me in implementing an admin-only audit log viewing endpoint and writing automated security tests for it.
+I asked AI to guide me step by step in creating a secure dashboard that displays only the documents accessible to the logged-in user.
 
 ### 2. AI Output
 AI helped me:
-- Create an admin audit logs route at `/admin/audit-logs`.
-- Restrict audit log access to authenticated administrators.
-- Add filters for action and outcome.
-- Return the latest 100 audit log entries.
-- Validate the outcome filter to accept only allowed and denied.
-- Write automated tests for admin access, unauthorized user access, and invalid filters.
+- Protect the dashboard using Flask-Login.
+- Reuse the existing `can_view_document()` permission function.
+- Retrieve documents and filter them based on user permissions.
+- Pass accessible documents to the homepage template.
+- Display document names and categories.
+- Configure the correct login redirect endpoint.
 
 ### 3. Problems Identified
 
-**Problem 1:** Normal users must not be allowed to view admin audit logs.
+**Problem 1:** The existing homepage test expected public access, but the dashboard now requires authentication.
 
-**Problem 2:** Invalid audit log filter values must be rejected.
+**Problem 2:** The login redirect was incorrectly configured, causing Flask to redirect to an invalid endpoint.
 
-**Problem 3:** Running pytest directly caused a ModuleNotFoundError because Python could not locate the app package.
+**Problem 3:** The dashboard must not expose documents that the logged-in user does not have permission to view.
 
 ### 4. My Fix
-- Registered the admin blueprint in the Flask application.
-- Added an admin role check to protect the audit logs endpoint.
-- Added automated tests for admin access, viewer access rejection, and invalid outcome filters.
-- Used `python -m pytest` to run tests through the active virtual environment.
+- Added `login_required` to protect the dashboard.
+- Used the existing `can_view_document()` function to filter accessible documents.
+- Updated the homepage template to display accessible documents.
+- Changed the Flask-Login configuration to use `auth.login`.
+- Updated the homepage test to verify login protection.
 
 ### 5. Testing
-- All 12 role and admin-related tests passed.
+- All 4 application basics tests passed.
 - All 50 project tests passed.
 
 ### 6. Commit Link
-https://github.com/yadavallimaheshwari3/TrustVault/commit/494af96
+[https://github.com/yadavallimaheshwari3/TrustVault/commit/65c7719](https://github.com/yadavallimaheshwari3/TrustVault/commit/65c7719)
