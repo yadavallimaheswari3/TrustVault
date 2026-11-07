@@ -153,3 +153,41 @@ AI helped me:
 
 ### 6. Commit Link
 To be added after creating the Git commit.
+
+
+## Entry 6: Day 5 - Admin Audit Logs and Security Testing
+
+**Date:** 2026-11-07
+
+### 1. Prompt Summary
+I asked AI to guide me in implementing an admin-only audit log viewing endpoint and writing automated security tests for it.
+
+### 2. AI Output
+AI helped me:
+- Create an admin audit logs route at `/admin/audit-logs`.
+- Restrict audit log access to authenticated administrators.
+- Add filters for action and outcome.
+- Return the latest 100 audit log entries.
+- Validate the outcome filter to accept only allowed and denied.
+- Write automated tests for admin access, unauthorized user access, and invalid filters.
+
+### 3. Problems Identified
+
+**Problem 1:** Normal users must not be allowed to view admin audit logs.
+
+**Problem 2:** Invalid audit log filter values must be rejected.
+
+**Problem 3:** Running pytest directly caused a ModuleNotFoundError because Python could not locate the app package.
+
+### 4. My Fix
+- Registered the admin blueprint in the Flask application.
+- Added an admin role check to protect the audit logs endpoint.
+- Added automated tests for admin access, viewer access rejection, and invalid outcome filters.
+- Used `python -m pytest` to run tests through the active virtual environment.
+
+### 5. Testing
+- All 12 role and admin-related tests passed.
+- All 50 project tests passed.
+
+### 6. Commit Link
+https://github.com/yadavallimaheshwari3/TrustVault/commit/494af96
