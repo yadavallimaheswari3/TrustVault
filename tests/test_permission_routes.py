@@ -291,3 +291,42 @@ def test_missing_permission_revoke_attempt_is_audited(permission_client):
         ).first()
 
         assert log is not None
+def test_revoked_viewer_cannot_download_document(permission_client):
+    client, app, ids = permission_client
+    document_id, owner_id, viewer_id, _ = ids
+
+    # Step 1: Owner revokes the viewer's permission
+    login_as(client, owner_id)
+
+    revoke_response = client.delete(
+        f"/documents/{document_id}/permissions/{viewer_id}"
+    )
+
+    assert revoke_response.status_code == 200
+
+    # Step 2: Viewer tries to download the same document
+    login_as(client, viewer_id)
+
+    download_response = client.get(
+        f"/documents/{document_id}/download"
+    )
+
+    # Step 3: Server must block the request
+    assert download_response.status_code == 403
+
+    # Step 4: Verify the denied attempt is recorded
+    with app.app_context():
+        permission = DocumentPermission.query.filter_by(
+            document_id=document_id,
+            user_id=viewer_id,
+        ).first()
+
+        assert permission is None
+
+        log = AuditLog.query.filter_by(
+            action="download",
+            outcome="denied",
+            document_id=document_id,
+        ).first()
+
+        assert log is not None

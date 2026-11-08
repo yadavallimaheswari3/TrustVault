@@ -26,79 +26,136 @@
 </section>
 
 {% if current_user.role == "owner" %}
-    <section class="upload-section">
-        <h3>Upload a Document</h3>
+<section class="upload-section">
+    <h3>Upload a Document</h3>
 
-        <form id="upload-form" enctype="multipart/form-data">
+    <form id="upload-form" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+            <label for="file">Choose Document</label>
             <input
-                type="hidden"
-                name="csrf_token"
-                value="{{ csrf_token() }}"
+                type="file"
+                id="file"
+                name="file"
+                accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                required
             >
+        </div>
 
-            <div class="form-group">
-                <label for="file">Choose Document</label>
-                <input
-                    type="file"
-                    id="file"
-                    name="file"
-                    accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
-                    required
-                >
-            </div>
+        <div class="form-group">
+            <label for="category">Category</label>
+            <input
+                type="text"
+                id="category"
+                name="category"
+                maxlength="100"
+                placeholder="Example: Personal, Work, Education"
+            >
+        </div>
 
-            <div class="form-group">
-                <label for="category">Category</label>
-                <input
-                    type="text"
-                    id="category"
-                    name="category"
-                    maxlength="100"
-                    placeholder="Example: Personal, Work, Education"
-                >
-            </div>
+        <button type="submit">Upload Document</button>
+    </form>
 
-            <button type="submit">Upload Document</button>
-        </form>
-
-        <p id="upload-message" role="status"></p>
-    </section>
+    <p id="upload-message" role="status"></p>
+</section>
 {% endif %}
 
 <h3>Recent Documents</h3>
 
 {% if recent_documents %}
-    <div class="document-list">
-        {% for document in recent_documents %}
-            <div class="document-card">
-                <h4>{{ document.original_filename }}</h4>
+<div class="document-list">
+    {% for document in recent_documents %}
+    <div class="document-card">
+        <h4>{{ document.original_filename }}</h4>
 
-                <p>
-                    Category:
-                    {{ document.category or "Uncategorized" }}
-                </p>
+        <p>Category: {{ document.category or "Uncategorized" }}</p>
+        <p>Owner: {{ document.owner.email }}</p>
+        <p>Uploaded: {{ document.uploaded_at.strftime("%d-%m-%Y") }}</p>
 
-                <p>
-                    Owner:
-                    {{ document.owner.email }}
-                </p>
+        <a href="{{ url_for(
+            'documents.download_document',
+            document_id=document.id
+        ) }}">Download</a>
 
-                <p>
-                    Uploaded:
-                    {{ document.uploaded_at.strftime("%d-%m-%Y") }}
-                </p>
+        {% if document.owner_id == current_user.id %}
+        <hr>
 
-                <a href="{{ url_for(
-                    'documents.download_document',
+        <section class="sharing-section">
+            <h4>Manage Access</h4>
+
+            <form
+                class="share-form"
+                data-url="{{ url_for(
+                    'permissions.grant_permission',
                     document_id=document.id
-                ) }}">
-                    Download
-                </a>
-            </div>
-        {% endfor %}
+                ) }}"
+            >
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf_token() }}"
+                >
+
+                <div class="form-group">
+                    <label>Email of registered user</label>
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="viewer@example.com"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>Permission</label>
+                    <select name="permission" required>
+                        <option value="read">Read</option>
+                        <option value="edit">Edit</option>
+                    </select>
+                </div>
+
+                <button type="submit">Grant Access</button>
+            </form>
+
+            <p class="share-message" role="status"></p>
+
+            <h4>Users With Access</h4>
+
+            {% if document.permissions %}
+                <ul class="permission-list">
+                    {% for permission in document.permissions %}
+                    <li>
+                        <span>
+                            {{ permission.user.email }}
+                            — {{ permission.permission|capitalize }}
+                        </span>
+
+                        <button
+                            type="button"
+                            class="revoke-button"
+                            data-url="{{ url_for(
+                                'permissions.revoke_permission',
+                                document_id=document.id,
+                                user_id=permission.user_id
+                            ) }}"
+                            data-csrf="{{ csrf_token() }}"
+                        >
+                            Revoke
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No users have access yet.</p>
+            {% endif %}
+        </section>
+        {% endif %}
     </div>
+    {% endfor %}
+</div>
 {% else %}
-    <p>No documents available yet.</p>
+<p>No documents available yet.</p>
 {% endif %}
 
 {% endblock %}
