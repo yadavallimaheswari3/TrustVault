@@ -1,196 +1,180 @@
-# TrustVault - AI Prompt Log
 
-## Entry 1: Day 1 - Project Setup and Registration
+# TrustVault – AI Prompt Log
+
+This file records how AI assistance was used during TrustVault development, the issues identified, and the fixes applied. Prompt descriptions are summaries, not verbatim transcripts.
+
+## Entry 1: Day 1 – Project Setup and Registration
 **Date:** 2026-11-02
 
-### 1. Prompt Summary
-I asked AI to guide me step by step to build TrustVault using Flask. I wanted to set up the project, database, and user registration.
+**Prompt summary:** Asked AI for beginner-friendly, step-by-step guidance to create the TrustVault Flask project and implement user registration.
 
-### 2. AI Output
-AI helped me create:
-- Flask application and project structure.
-- Database connection and User table.
-- User registration form.
-- Email and password validation.
-- Password hashing.
-- Database migration setup.
+**AI output:** Suggested Flask project structure, database setup, user registration, input validation, password hashing, and database migrations.
 
-### 3. Problems Identified
+**Problems identified:** Initial tests exposed CSRF-related test failures. Security configuration and secret handling also needed attention.
 
-**Problem 1:** During registration testing, 9 tests failed because CSRF protection required a security token.
+**Fix applied:** Adjusted test configuration while retaining CSRF protection in the application. Updated `.gitignore` and environment configuration.
 
-**Problem 2:** Git reported trailing whitespace in the database migration file.
+**Testing:** Registration and application tests were run.
 
-**Problem 3:** I needed to protect secret keys, local database files, and private uploaded documents from being pushed to GitHub.
+**Commit:** https://github.com/yadavallimaheswari3/TrustVault/commit/fd56f7e
 
-### 4. My Fix
-- Disabled CSRF only for normal registration tests and kept a separate CSRF security test enabled.
-- Removed the extra space from the migration file.
-- Updated `.gitignore` to protect private files and local database files.
+---
 
-### 5. Testing
-- All 10 registration tests passed.
-- All 14 project tests passed.
-- Checked Git status to make sure secret and local files were not included.
-
-### 6. Commit Link
-To be added after creating the Git commit.
-
-
-## Entry 2: Day 2 - Login and Logout Testing
+## Entry 2: Day 2 – Login and Logout
 **Date:** 2026-11-05
 
-### 1. Prompt Summary
-I asked AI to guide me in adding login and logout functionality and creating automated tests.
+**Prompt summary:** Asked AI to implement secure login and logout functionality.
 
-### 2. AI Output
-AI helped me create:
-- Login form and login route.
-- Login page.
-- Logout route using POST.
-- Automated tests for login and logout.
+**AI output:** Login and logout routes using Flask-Login and password-hash verification.
 
-### 3. Problem Identified
-Login and logout functionality did not have separate automated tests.
+**Problems identified:** Login behavior needed separate tests for valid credentials, invalid credentials, and logout.
 
-### 4. My Fix
-I created `tests/test_login.py` and tested successful login, incorrect password, and logout.
+**Fix applied:** Added dedicated login tests and checked authentication behavior.
 
-### 5. Testing
-- 3 login/logout tests passed.
-- All 17 project tests passed.
+**Testing:** Login tests and the project test suite were run.
 
-### 6. Commit Link
-To be added after creating the Git commit.
+**Commit:** https://github.com/yadavallimaheswari3/TrustVault/commit/40c67e4
 
+---
 
-## Entry 3: Day 2 - Role-Based Security
+## Entry 3: Day 2 – Role-Based Security
 **Date:** 2026-11-05
 
-### 1. Prompt Summary
-I asked AI to help implement Admin, Owner, and Viewer roles securely.
+**Prompt summary:** Asked AI to introduce Admin, Owner, and Viewer roles.
 
-### 2. AI Output
-AI helped me add role constants, a default viewer role, and a database constraint to allow only valid roles.
+**AI output:** Suggested role constants, a default Viewer role, and database role validation.
 
-### 3. Problem Identified
-The database needed protection against invalid user roles.
+**Problems identified:** Invalid roles must not be accepted, and users must not receive elevated privileges by default.
 
-### 4. My Fix
-I updated the User model with role restrictions and created automated tests for valid and invalid roles.
+**Fix applied:** Added role validation and tests for role restrictions.
 
-### 5. Testing
-- 2 role tests passed.
-- All 19 project tests passed.
+**Testing:** Role-related tests were run.
 
-### 6. Commit Link
-To be added after creating the Git commit.
+**Commit:** https://github.com/yadavallimaheswari3/TrustVault/commit/8ca8446
 
+---
 
-## Entry 4: Day 3 - Document Model and Ownership Validation
-
+## Entry 4: Day 3 – Document Permissions and Audit Logging
 **Date:** 2026-11-06
 
-### 1. Prompt Summary
-I asked AI to guide me step by step in creating a Document database model and testing document ownership in TrustVault.
+**Prompt summary:** Asked AI to help implement document-level permissions and record document-related activities.
 
-### 2. AI Output
-AI helped me:
-- Create a Document model using SQLAlchemy.
-- Add document fields such as owner ID, original filename, storage key, category, file size and upload date.
-- Establish a relationship between the Document and User models.
-- Generate and apply a database migration.
-- Write automated tests to validate document ownership.
+**AI output:** Suggested document permission records and audit log functionality.
 
-### 3. Problems Identified
+**Problems identified:** Access must be checked for each document. Unauthorized access attempts also need to be recorded.
 
-**Problem 1:** A document should not be saved without an owner.
+**Fix applied:** Implemented permission-related functionality and audit logging.
 
-**Problem 2:** I needed to verify that a document was correctly linked to its actual owner.
+**Testing:** Permission and audit-related tests were added and executed.
 
-### 4. My Fix
-- Added a test to verify that the database rejects a document without an owner.
-- Added a test to verify that a saved document is linked to the correct user.
-- Applied the database migration to create the documents table.
+**Commit:** https://github.com/yadavallimaheswari3/TrustVault/commit/5b884d4
 
-### 5. Testing
-- All 4 role and document ownership tests passed.
-- All 21 project tests passed.
+---
 
-### 6. Commit Link
-To be added after creating the Git commit.
-
-
-
-## Entry 5: Day 3 - Document Search and Access-Control Testing
-
+## Entry 5: Day 3 – Secure Document Upload
 **Date:** 2026-11-06
 
-### 1. Prompt Summary
-I asked AI to help implement document search with filters for document name, owner email, category, and upload date. I also wanted to ensure that users could only see documents they were authorized to access.
+**Prompt summary:** Asked AI to implement secure document uploads with validation.
 
-### 2. AI Output
-AI helped me:
-- Create a document search route using GET.
-- Add filters for document name, owner email, category, and upload date.
-- Check document-view permissions before including a document in search results.
-- Create automated tests for search functionality and access control.
+**AI output:** Suggested upload routes, file validation, storage handling, and document ownership.
 
-### 3. Problems Identified
+**Problems identified:** Upload validation and ownership checks are important to prevent unsafe files and unauthorized operations.
 
-**Problem 1:** Search results must not expose private documents belonging to other users.
+**Fix applied:** Implemented upload validation and tests for document uploads.
 
-**Problem 2:** Search filters must return the correct documents when multiple filters are used together.
+**Testing:** Upload validation tests were run.
 
-### 4. My Fix
-- Added an access-permission check before returning each search result.
-- Added a test to verify that document name, owner, category, and date filters work together.
-- Added a security test to verify that a viewer cannot find an unshared private document.
+**Commit:** https://github.com/yadavallimaheswari3/TrustVault/commit/db46d9b
 
-### 5. Testing
-- All 13 document-route tests passed.
-- All 44 project tests passed.
+---
 
-### 6. Commit Link
-To be added after creating the Git commit.
+## Entry 6: Day 3 – Document Search and Access-Control Testing
+**Date:** 2026-11-06
 
+**Prompt summary:** Asked AI to implement document search using filters.
 
+**AI output:** Suggested search by document name, owner, category, and date.
 
+**Problems identified:** Search results must not expose documents belonging to users who do not have permission to access them.
 
-## Entry 7: Day 5 - Secure Document Dashboard
+**Fix applied:** Applied access filtering to search results and added document route tests.
 
+**Testing:** Search and document access tests were run.
+
+**Commit:** https://github.com/yadavallimaheswari3/TrustVault/commit/a012da5
+
+---
+
+## Entry 7: Day 4 – Document Editing, Deletion, and Admin Audit Logs
 **Date:** 2026-11-07
 
-### 1. Prompt Summary
-I asked AI to guide me step by step in creating a secure dashboard that displays only the documents accessible to the logged-in user.
+**Prompt summary:** Asked AI to implement document editing, deletion, and administrative audit log access.
 
-### 2. AI Output
-AI helped me:
-- Protect the dashboard using Flask-Login.
-- Reuse the existing `can_view_document()` permission function.
-- Retrieve documents and filter them based on user permissions.
-- Pass accessible documents to the homepage template.
-- Display document names and categories.
-- Configure the correct login redirect endpoint.
+**AI output:** Suggested document update and delete routes and admin audit log functionality.
 
-### 3. Problems Identified
+**Problems identified:** Users must not be able to modify or delete documents they do not own. Administrative audit routes must require the Admin role.
 
-**Problem 1:** The existing homepage test expected public access, but the dashboard now requires authentication.
+**Fix applied:** Added ownership and role checks and related tests.
 
-**Problem 2:** The login redirect was incorrectly configured, causing Flask to redirect to an invalid endpoint.
+**Testing:** Document route and admin audit log tests were run.
 
-**Problem 3:** The dashboard must not expose documents that the logged-in user does not have permission to view.
+**Commits:**
+- https://github.com/yadavallimaheswari3/TrustVault/commit/0b36339
+- https://github.com/yadavallimaheswari3/TrustVault/commit/494af96
 
-### 4. My Fix
-- Added `login_required` to protect the dashboard.
-- Used the existing `can_view_document()` function to filter accessible documents.
-- Updated the homepage template to display accessible documents.
-- Changed the Flask-Login configuration to use `auth.login`.
-- Updated the homepage test to verify login protection.
+---
 
-### 5. Testing
-- All 4 application basics tests passed.
-- All 50 project tests passed.
+## Entry 8: Day 5 – Secure Document Dashboard
+**Date:** 2026-11-07
 
-### 6. Commit Link
-[https://github.com/yadavallimaheshwari3/TrustVault/commit/65c7719](https://github.com/yadavallimaheshwari3/TrustVault/commit/65c7719)
+**Prompt summary:** Asked AI to improve the dashboard and ensure users only see documents they are allowed to access.
+
+**AI output:** Suggested a protected dashboard using document access checks.
+
+**Problems identified:** A dashboard must not expose private documents simply because they exist in the database.
+
+**Fix applied:** Added authentication and document visibility checks.
+
+**Testing:** Dashboard and application tests were run.
+
+**Commits:**
+- https://github.com/yadavallimaheswari3/TrustVault/commit/65c7719
+- https://github.com/yadavallimaheswari3/TrustVault/commit/2989096
+
+---
+
+## Entry 9: Day 6 – Audit Log Integrity Protection
+**Date:** 2026-11-08
+
+**Prompt summary:** Asked AI to improve audit log integrity so that modifications to recorded events can be detected.
+
+**AI output:** Suggested HMAC-SHA256 event hashes and hash chaining using previous event hashes.
+
+**Problems identified:**
+- Modified audit event details must be detectable.
+- Broken links between audit events must be detected.
+- Existing unsigned audit records need to be handled honestly.
+- Database timestamps needed consistent normalization during verification.
+
+**Fix applied:** Added audit integrity fields, HMAC-based event verification, timestamp normalization, and a database migration. Added tests for valid chains, modified events, and broken previous hashes.
+
+**Testing:** All three audit integrity tests passed. The complete project test suite passed with 60 tests.
+
+**Commit:** https://github.com/yadavallimaheswari3/TrustVault/commit/3006c60
+
+---
+
+## Entry 10: Day 6 – Documentation and Threat Model
+**Date:** 2026-11-08
+
+**Prompt summary:** Asked AI to help document the actual application features, route permissions, setup instructions, security threats, and known limitations.
+
+**AI output:** Helped organize the README and threat model documentation.
+
+**Problems identified:** Security documentation must not claim protections that the application does not implement. Limitations such as unsigned legacy audit records and the absence of an external immutable audit checkpoint must be disclosed.
+
+**Fix applied:** Updated README.md and THREATS.md to describe implemented protections, setup instructions, testing, and accepted risks.
+
+**Commits:**
+- https://github.com/yadavallimaheswari3/TrustVault/commit/efa8261
+- https://github.com/yadavallimaheswari3/TrustVault/commit/b3c907b
