@@ -122,6 +122,13 @@ class AuditLog(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
+    previous_hash = db.Column(db.String(64), nullable=True)
+    event_hash = db.Column(
+        db.String(64),
+        nullable=True,
+        unique=True,
+    )
+
     actor_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id"),

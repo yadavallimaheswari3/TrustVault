@@ -1,0 +1,85 @@
+
+{% extends "base.html" %}
+
+{% block title %}Admin Audit Logs - TrustVault{% endblock %}
+
+{% block content %}
+
+<h2>Admin Audit Logs</h2>
+<p>Monitor document activities and security events.</p>
+
+<div class="audit-summary">
+    <h3>Total Records: {{ audit_logs|length }}</h3>
+</div>
+
+<form method="GET" action="{{ url_for('admin.audit_logs_page') }}"
+      class="audit-filters">
+
+    <div class="form-group">
+        <label for="action">Filter by Action</label>
+        <select name="action" id="action">
+            <option value="">All Actions</option>
+            {% for item in ['upload', 'download', 'edit', 'delete',
+                            'role_change', 'admin_password_reset'] %}
+                <option value="{{ item }}"
+                    {% if selected_action == item %}selected{% endif %}>
+                    {{ item|upper }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="outcome">Filter by Outcome</label>
+        <select name="outcome" id="outcome">
+            <option value="">All Outcomes</option>
+            {% for item in ['allowed', 'denied', 'success'] %}
+                <option value="{{ item }}"
+                    {% if selected_outcome == item %}selected{% endif %}>
+                    {{ item|upper }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <button type="submit">Apply Filters</button>
+    <a href="{{ url_for('admin.audit_logs_page') }}">Clear Filters</a>
+</form>
+
+{% if audit_logs %}
+<div class="audit-table-container">
+    <table class="audit-table">
+        <thead>
+            <tr>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Outcome</th>
+                <th>Document ID</th>
+                <th>Details</th>
+                <th>Date & Time</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for log in audit_logs %}
+            <tr>
+                <td>{{ log.actor or "System" }}</td>
+                <td>{{ log.action|upper }}</td>
+                <td>
+                    <span class="audit-outcome {{ log.outcome }}">
+                        {{ log.outcome|upper }}
+                    </span>
+                </td>
+                <td>{{ log.document_id or "N/A" }}</td>
+                <td>{{ log.details or "No details" }}</td>
+                <td>{{ log.created_at.strftime("%d-%m-%Y %H:%M") }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No audit logs found for the selected filters.</p>
+{% endif %}
+
+{% endblock %}

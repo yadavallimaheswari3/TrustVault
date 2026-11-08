@@ -1,0 +1,93 @@
+
+{% extends "base.html" %}
+
+{% block title %}User Management - TrustVault{% endblock %}
+
+{% block content %}
+
+<h2>User Management</h2>
+<p>View and manage TrustVault user accounts and roles.</p>
+
+<div class="audit-table-container">
+    <table class="audit-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Current Role</th>
+                <th>Account Created</th>
+                <th>Change Role</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.email }}</td>
+
+                <td>
+                    <span class="audit-outcome success">
+                        {{ user.role|upper }}
+                    </span>
+                </td>
+
+                <td>
+                    {{ user.created_at.strftime("%d-%m-%Y") }}
+                </td>
+
+                <td>
+                    {% if user.id != current_user.id %}
+                    <form
+                        method="POST"
+                        action="{{ url_for('admin.change_user_role', user_id=user.id) }}"
+                    >
+                        <input
+                            type="hidden"
+                            name="csrf_token"
+                            value="{{ csrf_token() }}"
+                        >
+
+                        <select name="role" required>
+                            <option value="admin"
+                                {% if user.role == 'admin' %}selected{% endif %}>
+                                Admin
+                            </option>
+
+                            <option value="owner"
+                                {% if user.role == 'owner' %}selected{% endif %}>
+                                Owner
+                            </option>
+
+                            <option value="viewer"
+                                {% if user.role == 'viewer' %}selected{% endif %}>
+                                Viewer
+                            </option>
+                        </select>
+
+                        <button type="submit">
+                            Update Role
+                        </button>
+                    </form>
+                    {% else %}
+                        <span>Current Admin</span>
+                    {% endif %}
+                </td>
+            </tr>
+
+            {% else %}
+            <tr>
+                <td colspan="5">No users found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<p>
+    <a href="{{ url_for('admin.admin_dashboard') }}">
+        Back to Admin Dashboard
+    </a>
+</p>
+
+{% endblock %}

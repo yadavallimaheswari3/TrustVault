@@ -196,3 +196,98 @@ def test_owner_can_update_existing_permission(permission_client):
         ).first()
 
         assert permission.permission == "edit"
+
+def test_invalid_permission_attempt_is_audited(permission_client):
+    client, app, ids = permission_client
+    document_id, owner_id, _, _ = ids
+
+    login_as(client, owner_id)
+
+    response = client.post(
+        f"/documents/{document_id}/permissions",
+        json={
+            "email": "viewer@example.com",
+            "permission": "admin",
+        },
+    )
+
+    assert response.status_code == 400
+
+    with app.app_context():
+        log = AuditLog.query.filter_by(
+            action="permission_grant",
+            outcome="denied",
+        ).first()
+
+        assert log is not None
+
+
+def test_unknown_user_permission_attempt_is_audited(permission_client):
+    client, app, ids = permission_client
+    document_id, owner_id, _, _ = ids
+
+    login_as(client, owner_id)
+
+    response = client.post(
+        f"/documents/{document_id}/permissions",
+        json={
+            "email": "unknown@example.com",
+            "permission": "read",
+        },
+    )
+
+    assert response.status_code == 404
+
+    with app.app_context():
+        log = AuditLog.query.filter_by(
+            action="permission_grant",
+            outcome="denied",
+        ).first()
+
+        assert log is not None
+
+
+def test_owner_cannot_grant_permission_to_self(permission_client):
+    client, app, ids = permission_client
+    document_id, owner_id, _, _ = ids
+
+    login_as(client, owner_id)
+
+    response = client.post(
+        f"/documents/{document_id}/permissions",
+        json={
+            "email": "owner@example.com",
+            "permission": "read",
+        },
+    )
+
+    assert response.status_code == 400
+
+    with app.app_context():
+        log = AuditLog.query.filter_by(
+            action="permission_grant",
+            outcome="denied",
+        ).first()
+
+        assert log is not None
+
+
+def test_missing_permission_revoke_attempt_is_audited(permission_client):
+    client, app, ids = permission_client
+    document_id, owner_id, _, _ = ids
+
+    login_as(client, owner_id)
+
+    response = client.delete(
+        f"/documents/{document_id}/permissions/999"
+    )
+
+    assert response.status_code == 404
+
+    with app.app_context():
+        log = AuditLog.query.filter_by(
+            action="permission_revoke",
+            outcome="denied",
+        ).first()
+
+        assert log is not None

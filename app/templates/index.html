@@ -1,22 +1,104 @@
+
 {% extends "base.html" %}
 
-{% block title %}Home - TrustVault{% endblock %}
+{% block title %}Dashboard - TrustVault{% endblock %}
 
 {% block content %}
+
 <h2>Welcome to TrustVault</h2>
+<p>Manage your documents securely from one place.</p>
 
-<h3>Your Accessible Documents</h3>
+<section class="dashboard-stats">
+    <div class="stat-card">
+        <h3>Total Documents</h3>
+        <p>{{ total_documents }}</p>
+    </div>
 
-{% if documents %}
-    <ul>
-        {% for document in documents %}
-            <li>
-                {{ document.original_filename }}
-                - {{ document.category or "Uncategorized" }}
-            </li>
+    <div class="stat-card">
+        <h3>My Documents</h3>
+        <p>{{ my_documents_count }}</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Shared With Me</h3>
+        <p>{{ shared_documents_count }}</p>
+    </div>
+</section>
+
+{% if current_user.role == "owner" %}
+    <section class="upload-section">
+        <h3>Upload a Document</h3>
+
+        <form id="upload-form" enctype="multipart/form-data">
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+            >
+
+            <div class="form-group">
+                <label for="file">Choose Document</label>
+                <input
+                    type="file"
+                    id="file"
+                    name="file"
+                    accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="category">Category</label>
+                <input
+                    type="text"
+                    id="category"
+                    name="category"
+                    maxlength="100"
+                    placeholder="Example: Personal, Work, Education"
+                >
+            </div>
+
+            <button type="submit">Upload Document</button>
+        </form>
+
+        <p id="upload-message" role="status"></p>
+    </section>
+{% endif %}
+
+<h3>Recent Documents</h3>
+
+{% if recent_documents %}
+    <div class="document-list">
+        {% for document in recent_documents %}
+            <div class="document-card">
+                <h4>{{ document.original_filename }}</h4>
+
+                <p>
+                    Category:
+                    {{ document.category or "Uncategorized" }}
+                </p>
+
+                <p>
+                    Owner:
+                    {{ document.owner.email }}
+                </p>
+
+                <p>
+                    Uploaded:
+                    {{ document.uploaded_at.strftime("%d-%m-%Y") }}
+                </p>
+
+                <a href="{{ url_for(
+                    'documents.download_document',
+                    document_id=document.id
+                ) }}">
+                    Download
+                </a>
+            </div>
         {% endfor %}
-    </ul>
+    </div>
 {% else %}
     <p>No documents available yet.</p>
 {% endif %}
+
 {% endblock %}

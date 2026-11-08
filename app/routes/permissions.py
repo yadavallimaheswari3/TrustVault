@@ -9,6 +9,15 @@ from app.audit import record_audit_event
 permissions_bp = Blueprint("permissions", __name__)
 
 
+def record_denied(action, details, document_id=None):
+    record_audit_event(
+        action=action,
+        outcome="denied",
+        document_id=document_id,
+        details=details,
+    )
+
+
 @permissions_bp.route(
     "/documents/<int:document_id>/permissions",
     methods=["POST"],
@@ -18,37 +27,63 @@ def grant_permission(document_id):
     document = db.session.get(Document, document_id)
 
     if document is None:
-        record_audit_event(
-            action="permission_grant",
-            outcome="denied",
-            document_id=document_id,
-            details="Document not found",
+        record_denied(
+            "permission_grant",
+            f"Document {document_id} not found",
         )
         return jsonify({"error": "Document not found"}), 404
 
     if document.owner_id != current_user.id:
-        record_audit_event(
-            action="permission_grant",
-            outcome="denied",
-            document_id=document.id,
-            details="Only the document owner can grant permission",
+        record_denied(
+            "permission_grant",
+            "Only the document owner can grant permission",
+            document.id,
         )
         return jsonify({"error": "Only the owner can grant permission"}), 403
 
-    data = request.get_json(silent=True) or request.form
+    data = request.get_json(silent=True)
 
-    email = data.get("email", "").strip().lower()
-    permission_type = data.get("permission", "").strip().lower()
+    if not isinstance(data, dict):
+        data = request.form
+
+    email = data.get("email", "")
+    permission_type = data.get("permission", "")
+
+    if not isinstance(email, str) or not isinstance(permission_type, str):
+        record_denied(
+            "permission_grant",
+            "Invalid email or permission format",
+            document.id,
+        )
+        return jsonify({"error": "Valid email and permission are required"}), 400
+
+    email = email.strip().lower()
+    permission_type = permission_type.strip().lower()
 
     if not email or permission_type not in ("read", "edit"):
+        record_denied(
+            "permission_grant",
+            "Invalid email or permission value",
+            document.id,
+        )
         return jsonify({"error": "Valid email and permission are required"}), 400
 
     user = User.query.filter_by(email=email).first()
 
     if user is None:
+        record_denied(
+            "permission_grant",
+            f"User not found: {email}",
+            document.id,
+        )
         return jsonify({"error": "User not found"}), 404
 
     if user.id == current_user.id:
+        record_denied(
+            "permission_grant",
+            "Owner attempted to grant permission to themselves",
+            document.id,
+        )
         return jsonify({"error": "Owner already has access"}), 400
 
     existing_permission = DocumentPermission.query.filter_by(
@@ -89,20 +124,17 @@ def revoke_permission(document_id, user_id):
     document = db.session.get(Document, document_id)
 
     if document is None:
-        record_audit_event(
-            action="permission_revoke",
-            outcome="denied",
-            document_id=document_id,
-            details="Document not found",
+        record_denied(
+            "permission_revoke",
+            f"Document {document_id} not found",
         )
         return jsonify({"error": "Document not found"}), 404
 
     if document.owner_id != current_user.id:
-        record_audit_event(
-            action="permission_revoke",
-            outcome="denied",
-            document_id=document.id,
-            details="Only the document owner can revoke permission",
+        record_denied(
+            "permission_revoke",
+            "Only the document owner can revoke permission",
+            document.id,
         )
         return jsonify({"error": "Only the owner can revoke permission"}), 403
 
@@ -112,6 +144,11 @@ def revoke_permission(document_id, user_id):
     ).first()
 
     if permission is None:
+        record_denied(
+            "permission_revoke",
+            f"No permission found for user {user_id}",
+            document.id,
+        )
         return jsonify({"error": "Permission not found"}), 404
 
     db.session.delete(permission)

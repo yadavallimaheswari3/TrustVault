@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block title %}Login - TrustVault{% endblock %}
@@ -28,4 +29,9 @@
 
         {{ form.submit() }}
     </form>
+
+    <p>
+        Don't have an account?
+        <a href="{{ url_for('auth.register') }}">Create an Account</a>
+    </p>
 {% endblock %}

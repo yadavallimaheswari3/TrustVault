@@ -4,6 +4,7 @@ from app.permissions import can_view_document, can_edit_document
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+
 from app import create_app
 from app.extensions import db
 from app.models import User, Document, DocumentPermission, AuditLog
@@ -356,3 +357,103 @@ def test_invalid_audit_log_outcome_is_rejected(role_app):
     )
 
     assert response.status_code == 400
+def test_invalid_role_change_is_audited(role_app):
+    with role_app.app_context():
+        admin = User(
+            email="role_admin@example.com",
+            password_hash="test_hash",
+            role="admin",
+        )
+        viewer = User(
+            email="role_viewer@example.com",
+            password_hash="test_hash",
+            role="viewer",
+        )
+        db.session.add_all([admin, viewer])
+        db.session.commit()
+        admin_id = admin.id
+        viewer_id = viewer.id
+
+    client = role_app.test_client()
+
+    with client.session_transaction() as session:
+        session["_user_id"] = str(admin_id)
+        session["_fresh"] = True
+
+    response = client.post(
+        f"/admin/users/{viewer_id}/role",
+        data={"role": "superadmin"},
+    )
+
+    assert response.status_code == 302
+
+    with role_app.app_context():
+        log = AuditLog.query.filter_by(
+            action="role_change",
+            outcome="denied",
+        ).first()
+        assert log is not None
+
+
+def test_admin_cannot_change_own_role(role_app):
+    with role_app.app_context():
+        admin = User(
+            email="self_admin@example.com",
+            password_hash="test_hash",
+            role="admin",
+        )
+        db.session.add(admin)
+        db.session.commit()
+        admin_id = admin.id
+
+    client = role_app.test_client()
+
+    with client.session_transaction() as session:
+        session["_user_id"] = str(admin_id)
+        session["_fresh"] = True
+
+    response = client.post(
+        f"/admin/users/{admin_id}/role",
+        data={"role": "viewer"},
+    )
+
+    assert response.status_code == 302
+
+    with role_app.app_context():
+        log = AuditLog.query.filter_by(
+            action="role_change",
+            outcome="denied",
+        ).first()
+        assert log is not None
+
+
+def test_missing_user_role_change_is_audited(role_app):
+    with role_app.app_context():
+        admin = User(
+            email="missing_admin@example.com",
+            password_hash="test_hash",
+            role="admin",
+        )
+        db.session.add(admin)
+        db.session.commit()
+        admin_id = admin.id
+
+    client = role_app.test_client()
+
+    with client.session_transaction() as session:
+        session["_user_id"] = str(admin_id)
+        session["_fresh"] = True
+
+    response = client.post(
+        "/admin/users/9999/role",
+        data={"role": "viewer"},
+    )
+
+    assert response.status_code == 302
+
+    with role_app.app_context():
+        log = AuditLog.query.filter_by(
+            action="role_change",
+            outcome="denied",
+        ).first()
+        assert log is not None

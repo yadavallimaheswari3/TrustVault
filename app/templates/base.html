@@ -16,6 +16,7 @@
 
             {% if current_user.is_authenticated %}
                 <span>{{ current_user.email }}</span>
+<span class="user-role">{{ current_user.role|upper }}</span>
 
                 <form method="POST" action="{{ url_for('auth.logout') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
