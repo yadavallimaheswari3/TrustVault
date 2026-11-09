@@ -178,3 +178,38 @@ This file records how AI assistance was used during TrustVault development, the 
 **Commits:**
 - https://github.com/yadavallimaheswari3/TrustVault/commit/efa8261
 - https://github.com/yadavallimaheswari3/TrustVault/commit/b3c907b
+
+
+### Entry 11: Day 8 – Persistent Cloud Document Storage
+
+**Date:** 2026-11-09
+
+**Prompt Summary:** Asked the AI assistant how to store uploaded documents persistently because Render's local file storage may not survive restarts or redeployments. We wanted a free solution that works with our existing Flask application.
+
+**AI Output:** Suggested integrating Supabase Storage using a private bucket and connecting it to the existing document metadata stored in Neon PostgreSQL.
+
+**Problem Identified:** Local file storage on Render is not reliable for persistent uploads. Also, the production app initially used SQLite because the production database URL had not been configured.
+
+**Solution Implemented:** Created a private Supabase bucket, integrated upload, download and delete operations through server-side storage functions, configured the required Render environment variables, and added the Neon PostgreSQL connection string. Render logs confirmed PostgreSQL was being used.
+
+**Testing:** Full test suite passed: 61 tests. Live testing confirmed document upload, authorized viewer download, permission revocation, HTTP 403 for revoked access, and audit log visibility.
+
+**Related Commit:** [59cde0a – Supabase storage integration](https://github.com/yadavallimaheswari3/TrustVault/commit/59cde0a)
+
+---
+
+### Entry 12: Day 8 – README and Threat Model Update
+
+**Date:** 2026-11-09
+
+**Prompt Summary:** Asked the AI assistant to update the project documentation to reflect the actual production setup, Supabase storage, Neon PostgreSQL, deployment instructions, test results, and security limitations.
+
+**AI Output:** Helped revise README.md and THREATS.md with the current implementation and deployment details.
+
+**Problem Identified:** The earlier documentation did not fully describe the new cloud storage integration and production database configuration. It also needed to distinguish implemented security features from future improvements.
+
+**Solution Implemented:** Updated README.md and THREATS.md with the current Render deployment URL, private Supabase storage, Neon PostgreSQL configuration, setup instructions, live verification results, and known limitations.
+
+**Testing:** Documentation changes were committed and pushed. The application test suite had 61 passing tests.
+
+**Related Commit:** [f7229d7 – Update README and threat model](https://github.com/yadavallimaheswari3/TrustVault/commit/f7229d7)
