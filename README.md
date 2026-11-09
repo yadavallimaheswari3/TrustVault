@@ -1,19 +1,21 @@
 # TrustVault
 
-**Secure Document Sharing Platform with a Real Audit Trail**
+## Secure Document Sharing Platform with a Real Audit Trail
 
-TrustVault is a Flask-based web application designed to securely upload, manage, search, and share documents. It uses role-based access control, document-specific permissions, private cloud storage, and audit logging to help protect private documents.
+TrustVault is a Flask-based web application designed to securely upload, manage, search, and share documents. It uses role-based access control, document-specific permissions, private cloud storage, and audit logging to protect private documents.
 
 **Live Application:** https://trustvault-7z5w.onrender.com
 
 **GitHub Repository:** https://github.com/yadavallimaheswari3/TrustVault
+
+---
 
 ## Features
 
 - User registration, login, and logout.
 - Three roles: Admin, Owner, and Viewer.
 - Secure document upload and download.
-- Document metadata editing and document deletion.
+- Document metadata editing and deletion.
 - Document-specific Read and Edit permissions.
 - Owners can grant and revoke document access.
 - Search documents using available filters.
@@ -31,7 +33,7 @@ TrustVault is a Flask-based web application designed to securely upload, manage,
 - Flask-Login
 - Flask-WTF
 - Flask-Migrate
-- SQLite for local development (default configuration)
+- SQLite for local development
 - PostgreSQL through psycopg for production
 - Neon PostgreSQL for production database hosting
 - Supabase Storage for persistent document files
@@ -51,7 +53,7 @@ TrustVault is a Flask-based web application designed to securely upload, manage,
 | Grant/revoke access to own documents | No | Yes | No |
 | Access documents shared with them | No automatic access | Yes, own documents | Yes, with permission |
 
-**Document permissions:**
+### Document Permissions
 
 - **Read:** Allows an authorized user to view and download a shared document.
 - **Edit:** Allows an authorized user to view, download, and edit document metadata.
@@ -62,7 +64,7 @@ Authorization is checked on the server for protected operations. Removing a perm
 
 ## Security
 
-### Authentication and authorization
+### Authentication and Authorization
 
 - Passwords are stored as password hashes, not plain text.
 - Login is required for protected dashboard and document operations.
@@ -70,14 +72,14 @@ Authorization is checked on the server for protected operations. Removing a perm
 - Document permissions are checked against the database.
 - Revoked permissions prevent subsequent unauthorized document requests.
 
-### File upload validation
+### File Upload Validation
 
 - Maximum file size: 10 MB.
 - Allowed extensions: PDF, DOC, DOCX, TXT, PNG, JPG, and JPEG.
 - Uploaded content is checked against the expected file format.
 - Filenames are sanitized before processing.
 
-### Persistent document storage
+### Persistent Document Storage
 
 - Document files are stored in a private Supabase Storage bucket named `trustvault-documents`.
 - The bucket is not publicly accessible.
@@ -86,7 +88,7 @@ Authorization is checked on the server for protected operations. Removing a perm
 - Users must pass application authorization checks before document downloads.
 - The Supabase secret key must never be exposed in frontend code or committed to Git.
 
-### Audit logging
+### Audit Logging
 
 Important activities are recorded with information such as the actor, action, outcome, timestamp, and available request details.
 
@@ -96,14 +98,14 @@ The audit log integrity mechanism uses HMAC-SHA256 hashes linked through previou
 
 ## Installation and Local Setup
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/yadavallimaheswari3/TrustVault.git
 cd TrustVault
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create and Activate a Virtual Environment
 
 Windows PowerShell:
 
@@ -112,13 +114,13 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
-### 3. Install dependencies
+### 3. Install Dependencies
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
+### 4. Configure Environment Variables
 
 Copy `.env.example` to `.env`:
 
@@ -145,13 +147,13 @@ Keep `.env` private. Never commit real secret keys, database passwords, or crede
 
 Use `FLASK_DEBUG=1` only for local development. Disable debug mode in production.
 
-### 5. Apply database migrations
+### 5. Apply Database Migrations
 
 ```powershell
 flask --app run.py db upgrade
 ```
 
-### 6. Create user accounts
+### 6. Create User Accounts
 
 Create the first Admin account:
 
@@ -169,7 +171,7 @@ New users registered through the application receive the default Viewer role.
 
 The account creation scripts securely request passwords and require a minimum of 12 characters. The Admin script prevents creating another Admin if one already exists.
 
-### 7. Start the application
+### 7. Start the Application
 
 ```powershell
 python run.py
@@ -205,15 +207,17 @@ The deployed application uses HTTPS through its Render URL. Additional deploymen
 
 ## Demo Accounts
 
-The challenge requires one evaluation account for each role. Create dedicated demo accounts and replace these placeholders with their actual credentials before submission.
+The following dedicated demo accounts are provided for project evaluation.
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | demo-admin@example.com | Replace with demo-only password |
-| Owner | demo-owner@example.com | Replace with demo-only password |
-| Viewer | demo-viewer@example.com | Replace with demo-only password |
+| Admin | admin@example.com | Admin@123456789 |
+| Owner | owner@example.com | Owner@123456789 |
+| Viewer | viewer@example.com | Viewer@123456789 |
 
-**Security note:** These must be dedicated evaluation accounts containing only test data. Do not publish personal account credentials, production secrets, or database passwords. Because this repository is public, anyone can see these demo credentials.
+**Live Application:** https://trustvault-7z5w.onrender.com
+
+These accounts are intended only for project evaluation and contain test data. Do not use these passwords for personal accounts or any other service. These credentials are publicly visible in this repository.
 
 ## Automated Tests
 
@@ -234,8 +238,9 @@ The tests cover application basics, registration, login, roles, document operati
 | GET, POST | `/register` | Public registration |
 | GET, POST | `/login` | Public login |
 | POST | `/logout` | Authenticated user |
-| GET | `/` | Authenticated user |
+| GET | `/` | Home page |
 | GET | `/health` | Public health check |
+| GET | `/static/<path:filename>` | Static files |
 | GET | `/admin/dashboard` | Admin |
 | GET | `/admin/users` | Admin |
 | POST | `/admin/users/<user_id>/role` | Admin |
@@ -249,9 +254,9 @@ The tests cover application basics, registration, login, roles, document operati
 | POST | `/documents/<document_id>/permissions` | Document owner |
 | DELETE | `/documents/<document_id>/permissions/<user_id>` | Document owner |
 
-Unauthorized requests to protected operations should be rejected by server-side checks.
+Unauthorized requests to protected operations are rejected by server-side checks.
 
-For detailed endpoint documentation, including request parameters, permission requirements, and response codes, see `API.md`.
+For detailed endpoint documentation, including permission requirements, see `API.md`.
 
 ## Threat Model
 
@@ -277,7 +282,13 @@ Potential future improvements include:
 
 TrustVault is deployed and its main document-sharing workflow has been manually verified in production.
 
-Verified live operations include document upload, authorized download, permission revocation, rejection of revoked-user direct download requests, and admin audit log visibility.
+Verified live operations include:
+
+- Document upload.
+- Authorized document download.
+- Permission revocation.
+- Rejection of revoked-user direct download requests.
+- Admin audit log visibility.
 
 The latest local automated test run passed 61 tests.
 
