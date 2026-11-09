@@ -11,7 +11,7 @@ from flask import (
     current_app,
     jsonify,
     request,
-    send_from_directory,
+    send_file,
 )
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
@@ -20,6 +20,7 @@ from app.extensions import db
 from app.models import Document, DocumentPermission, User
 from app.permissions import can_view_document, can_edit_document
 from app.audit import record_audit_event
+from app.storage import upload_file, download_file, delete_file
 
 
 documents_bp = Blueprint("documents", __name__)
@@ -137,11 +138,6 @@ def upload_document():
 
     storage_key = uuid.uuid4().hex + extension
 
-    upload_folder = Path(current_app.config["UPLOAD_FOLDER"])
-    upload_folder.mkdir(parents=True, exist_ok=True)
-
-    file_path = upload_folder / storage_key
-
     document = Document(
         owner_id=current_user.id,
         original_filename=original_filename,
@@ -151,7 +147,11 @@ def upload_document():
     )
 
     try:
-        file_path.write_bytes(file_data)
+        upload_file(
+            storage_key,
+            file_data,
+            uploaded_file.mimetype or "application/octet-stream",
+        )
 
         db.session.add(document)
         db.session.commit()
@@ -159,8 +159,12 @@ def upload_document():
     except Exception:
         db.session.rollback()
 
-        if file_path.exists():
-            file_path.unlink()
+        try:
+            delete_file(storage_key)
+        except Exception:
+            current_app.logger.exception(
+                "Could not clean up uploaded cloud file."
+            )
 
         raise
 
@@ -200,7 +204,14 @@ def download_document(document_id):
         )
         abort(403)
 
-    upload_folder = Path(current_app.config["UPLOAD_FOLDER"])
+    try:
+        file_data = download_file(document.storage_key)
+    except Exception:
+        current_app.logger.exception(
+            "Could not download document from cloud storage: %s",
+            document.id,
+        )
+        abort(404)
 
     record_audit_event(
         action="download",
@@ -209,11 +220,11 @@ def download_document(document_id):
         details="Authorized document download",
     )
 
-    return send_from_directory(
-        upload_folder,
-        document.storage_key,
+    return send_file(
+        BytesIO(file_data),
         as_attachment=True,
         download_name=document.original_filename,
+        mimetype="application/octet-stream",
     )
 
 
@@ -375,11 +386,7 @@ def delete_document(document_id):
         }), 403
 
     deleted_document_id = document.id
-
-    file_path = (
-        Path(current_app.config["UPLOAD_FOLDER"])
-        / document.storage_key
-    )
+    storage_key = document.storage_key
 
     try:
         DocumentPermission.query.filter_by(
@@ -393,12 +400,11 @@ def delete_document(document_id):
         db.session.rollback()
         raise
 
-    # Remove the physical file after the database deletion succeeds.
     try:
-        file_path.unlink(missing_ok=True)
-    except OSError:
+        delete_file(storage_key)
+    except Exception:
         current_app.logger.exception(
-            "Could not remove deleted document file: %s",
+            "Could not remove deleted cloud document: %s",
             deleted_document_id,
         )
 

@@ -1,3 +1,4 @@
+
 import os
 from pathlib import Path
 
@@ -21,4 +22,9 @@ def get_default_config():
             "pool_pre_ping": True,
             "pool_recycle": 300,
         },
+        "SUPABASE_URL": os.environ.get("SUPABASE_URL"),
+        "SUPABASE_SECRET_KEY": os.environ.get("SUPABASE_SECRET_KEY"),
+        "SUPABASE_BUCKET": os.environ.get(
+            "SUPABASE_BUCKET", "trustvault-documents"
+        ),
     }
