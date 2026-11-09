@@ -6,6 +6,8 @@ TrustVault is a Flask-based secure document-sharing application.
 
 Its security objective is to ensure that users can access only documents they own or documents explicitly shared with them. Authorization is enforced on the server, not merely through interface visibility.
 
+The production application uses Neon PostgreSQL for database records and a private Supabase Storage bucket for uploaded document files.
+
 This document describes important assets, possible attackers, threat scenarios, existing security controls, security tests, and accepted limitations.
 
 ## 2. Assets to Protect
@@ -20,6 +22,7 @@ This document describes important assets, possible attackers, threat scenarios, 
 | User roles | Prevent privilege escalation |
 | Audit logs | Preserve evidence of security-related activity |
 | Application secret key | Protect sessions and audit-event signatures |
+| Supabase secret key | Protect private document storage access |
 | Database and uploaded-file storage | Prevent unauthorized modification or deletion |
 
 ## 3. Threat Actors
@@ -42,6 +45,7 @@ Potential threat actors include:
 **Impact:** Confidential documents could be exposed.
 
 **Existing controls:**
+
 - Protected document routes require authentication.
 - Document access is checked on the server.
 - The `can_view_document()` function checks ownership and document-specific permissions.
@@ -56,6 +60,7 @@ Potential threat actors include:
 **Impact:** Document metadata could be changed without permission.
 
 **Existing controls:**
+
 - The edit route checks `can_edit_document()` on the server.
 - Owners can edit their own documents.
 - Other users require an Edit permission.
@@ -70,6 +75,7 @@ Potential threat actors include:
 **Impact:** Important documents could be deleted.
 
 **Existing controls:**
+
 - The delete route verifies document ownership.
 - Only the owner can delete the document.
 - Denied deletion attempts are recorded.
@@ -83,6 +89,7 @@ Potential threat actors include:
 **Impact:** Private documents could be exposed to unauthorized users.
 
 **Existing controls:**
+
 - Permission routes require authentication.
 - The server verifies that the current user owns the document.
 - Only Read and Edit permission values are accepted.
@@ -97,9 +104,12 @@ Potential threat actors include:
 **Impact:** A user could retain access after it should have been removed.
 
 **Existing controls:**
+
 - Permission checks query current database records.
 - Access is not based only on a previously displayed page or hidden interface element.
 - Subsequent requests are checked against the updated permission records.
+
+**Live verification:** The Owner revoked a Viewer permission. The document disappeared from the Viewer's dashboard, and a direct download request returned HTTP 403 Forbidden.
 
 **Limitation:** Revocation prevents subsequent authorized requests. It cannot retrieve a document already downloaded or necessarily terminate a transfer that was already in progress.
 
@@ -110,6 +120,7 @@ Potential threat actors include:
 **Impact:** Unauthorized administrative control.
 
 **Existing controls:**
+
 - Admin routes require authentication.
 - The server checks the user's Admin role.
 - Unauthorized Admin access attempts are recorded.
@@ -124,6 +135,7 @@ Potential threat actors include:
 **Impact:** Unsafe or invalid files could enter document storage.
 
 **Existing controls:**
+
 - Only PDF, DOC, DOCX, TXT, PNG, JPG, and JPEG extensions are allowed.
 - Maximum upload size is 10 MB.
 - The server checks file content signatures or structure for supported formats.
@@ -138,6 +150,7 @@ Potential threat actors include:
 **Impact:** User credentials could be compromised.
 
 **Existing controls:**
+
 - Passwords are stored as Werkzeug password hashes rather than plaintext.
 - Account-creation scripts request passwords without displaying them in the terminal.
 - The scripts require passwords of at least 12 characters.
@@ -151,33 +164,60 @@ Potential threat actors include:
 **Impact:** Evidence of security incidents could become unreliable.
 
 **Existing controls:**
+
 - Audit events use HMAC-SHA256 signatures.
 - Each signed event includes a link to the previous signed event.
 - Verification checks event hashes and previous-hash links.
 - Automated tests detect modified event details and broken previous-hash links.
 
 **Limitations:**
+
 - Historical audit entries created before hash protection was introduced are legacy entries and are not cryptographically verified.
 - The HMAC secret must remain confidential.
 - An attacker who compromises the application and its secret may be able to forge new valid events.
 - Without an external immutable checkpoint, deletion or truncation of the latest events may not be detected.
 - Independent, append-only audit storage is a future improvement.
 
+### Threat 10: Unauthorized access to cloud document storage
+
+**Attack:** An attacker attempts to access uploaded files directly through cloud storage instead of using the application's document authorization routes.
+
+**Impact:** Private documents could be exposed or modified.
+
+**Existing controls:**
+
+- Uploaded documents are stored in a private Supabase Storage bucket.
+- Public bucket access is disabled.
+- The Supabase secret key is used only by the server-side application.
+- Document download routes check current ownership and permissions before retrieving file bytes.
+- The secret key must not be placed in frontend code or committed to Git.
+
+**Live verification:** The production application successfully uploaded and downloaded a test document through Supabase Storage.
+
+**Accepted risks:**
+
+- A compromise of the application server or Supabase secret key could expose stored documents.
+- Storage-provider access controls and account security remain important.
+- Independent backups and recovery procedures are future improvements.
+
 ## 5. Role-Based Access Control
 
 ### Admin
+
 - Can access the Admin dashboard.
 - Can manage users and roles.
 - Can view audit logs.
 - Does not automatically receive access to every private document.
 
 ### Owner
+
 - Can upload documents.
 - Can view, edit, and delete owned documents.
 - Can grant Read or Edit permission to another registered user.
 - Can revoke document-specific permissions.
 
 ### Viewer
+
 - Can access documents explicitly shared with them.
 - Read permission allows viewing and downloading.
 - Edit permission allows viewing, downloading, and editing document metadata.
@@ -213,14 +253,26 @@ The automated test suite includes coverage for:
 - Document operations.
 - Permission grants and revocations.
 - Unauthorized access attempts.
+- Upload validation.
 - Audit-chain integrity.
 
 Three dedicated audit-integrity tests verify:
+
 1. A valid signed audit chain passes verification.
 2. Modified event details fail verification.
 3. An incorrect previous-event hash fails verification.
 
-**Latest recorded full test result: 60 passed.**
+**Latest verified automated test result: 61 passed.**
+
+**Production manual verification:**
+
+1. Owner uploaded a test document successfully.
+2. Owner granted Read permission to a Viewer.
+3. Viewer downloaded the shared document successfully.
+4. Owner revoked the Viewer permission.
+5. The document disappeared from the Viewer's dashboard.
+6. A direct download request by the revoked Viewer returned HTTP 403 Forbidden.
+7. Admin Audit Logs displayed the relevant permission and access activities.
 
 Tests are useful evidence of the implemented controls, but they do not prove the absence of every security vulnerability. The deployed application should also be tested against direct unauthorized HTTP requests.
 
@@ -233,14 +285,16 @@ The following protections are not claimed as implemented unless separately verif
 | Multi-factor authentication | Future improvement |
 | Login rate limiting and account lockout | Future improvement |
 | Malware scanning | Future improvement |
-| Encryption at rest | Future improvement |
+| Independently managed encryption keys for stored files | Future improvement |
 | Independent immutable audit storage | Future improvement |
 | External audit checkpoints | Future improvement |
-| Production HTTPS and deployment hardening | Requires deployment verification |
+| Production HTTPS | Render HTTPS URL verified |
+| Additional deployment hardening | Future improvement |
 | Automated backup and recovery | Future improvement |
 | Security monitoring and alerting | Future improvement |
 
 Other accepted risks include:
+
 - A user who is authorized to download a document may retain a local copy after access is revoked.
 - Compromise of the application server or its secret key can undermine audit integrity.
 - A database administrator with sufficient privileges may modify or delete stored records.

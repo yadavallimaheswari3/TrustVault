@@ -2,13 +2,18 @@
 
 **Secure Document Sharing Platform with a Real Audit Trail**
 
-TrustVault is a Flask-based web application designed to securely upload, manage, search, and share documents. It uses role-based access control, document-specific permissions, and audit logging to help protect private documents.
+TrustVault is a Flask-based web application designed to securely upload, manage, search, and share documents. It uses role-based access control, document-specific permissions, private cloud storage, and audit logging to help protect private documents.
+
+**Live Application:** https://trustvault-7z5w.onrender.com
+
+**GitHub Repository:** https://github.com/yadavallimaheswari3/TrustVault
 
 ## Features
 
 - User registration, login, and logout.
 - Three roles: Admin, Owner, and Viewer.
-- Secure document upload, download, editing, and deletion.
+- Secure document upload and download.
+- Document metadata editing and document deletion.
 - Document-specific Read and Edit permissions.
 - Owners can grant and revoke document access.
 - Search documents using available filters.
@@ -16,6 +21,7 @@ TrustVault is a Flask-based web application designed to securely upload, manage,
 - Audit logs for important activities and denied access attempts.
 - Audit log integrity verification using HMAC-SHA256 hash chaining.
 - Upload validation using allowed extensions and file-content checks.
+- Persistent document file storage using a private Supabase Storage bucket.
 
 ## Technology Stack
 
@@ -25,9 +31,13 @@ TrustVault is a Flask-based web application designed to securely upload, manage,
 - Flask-Login
 - Flask-WTF
 - Flask-Migrate
-- SQLite (default database)
-- PostgreSQL support through psycopg
+- SQLite for local development (default configuration)
+- PostgreSQL through psycopg for production
+- Neon PostgreSQL for production database hosting
+- Supabase Storage for persistent document files
 - Pytest
+- Gunicorn
+- Render for application hosting
 
 ## User Roles and Permissions
 
@@ -42,8 +52,9 @@ TrustVault is a Flask-based web application designed to securely upload, manage,
 | Access documents shared with them | No automatic access | Yes, own documents | Yes, with permission |
 
 **Document permissions:**
-- **Read:** Allows an authorized user to view/download a shared document.
-- **Edit:** Allows an authorized user to view/download and edit a shared document.
+
+- **Read:** Allows an authorized user to view and download a shared document.
+- **Edit:** Allows an authorized user to view, download, and edit document metadata.
 - Document owners retain access to their own documents.
 - Admin status does not automatically grant access to private documents.
 
@@ -52,18 +63,31 @@ Authorization is checked on the server for protected operations. Removing a perm
 ## Security
 
 ### Authentication and authorization
+
 - Passwords are stored as password hashes, not plain text.
 - Login is required for protected dashboard and document operations.
 - Role and document ownership checks are performed on the server.
 - Document permissions are checked against the database.
+- Revoked permissions prevent subsequent unauthorized document requests.
 
 ### File upload validation
+
 - Maximum file size: 10 MB.
 - Allowed extensions: PDF, DOC, DOCX, TXT, PNG, JPG, and JPEG.
 - Uploaded content is checked against the expected file format.
 - Filenames are sanitized before processing.
 
+### Persistent document storage
+
+- Document files are stored in a private Supabase Storage bucket named `trustvault-documents`.
+- The bucket is not publicly accessible.
+- Document metadata and permission records are stored in PostgreSQL in production.
+- The application uses server-side Supabase credentials to access the private bucket.
+- Users must pass application authorization checks before document downloads.
+- The Supabase secret key must never be exposed in frontend code or committed to Git.
+
 ### Audit logging
+
 Important activities are recorded with information such as the actor, action, outcome, timestamp, and available request details.
 
 The audit log integrity mechanism uses HMAC-SHA256 hashes linked through previous-event hashes. Automated tests check valid chains and detect modified event details or broken links.
@@ -75,7 +99,7 @@ The audit log integrity mechanism uses HMAC-SHA256 hashes linked through previou
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yadavallimaheshwari3/TrustVault.git
+git clone https://github.com/yadavallimaheswari3/TrustVault.git
 cd TrustVault
 ```
 
@@ -102,23 +126,29 @@ Copy `.env.example` to `.env`:
 Copy-Item .env.example .env
 ```
 
-Edit `.env` and replace the example secret with a long, randomly generated secret.
-
-Example:
+Configure the required values in `.env`:
 
 ```env
 SECRET_KEY=replace-with-a-long-random-secret
 FLASK_DEBUG=1
+
+SUPABASE_URL=your-supabase-project-url
+SUPABASE_SECRET_KEY=your-supabase-secret-key
+SUPABASE_BUCKET=trustvault-documents
 ```
 
-Keep `.env` private. Do not commit real secret keys or passwords to Git.
+For production, configure `DATABASE_URL` with the Neon PostgreSQL connection string.
+
+For local document upload and download, configure the Supabase storage variables and create the private `trustvault-documents` bucket in Supabase.
+
+Keep `.env` private. Never commit real secret keys, database passwords, or credentials to Git.
 
 Use `FLASK_DEBUG=1` only for local development. Disable debug mode in production.
 
 ### 5. Apply database migrations
 
 ```powershell
-flask db upgrade
+flask --app run.py db upgrade
 ```
 
 ### 6. Create user accounts
@@ -147,9 +177,43 @@ python run.py
 
 Open:
 
-```text
 http://127.0.0.1:5000
-```
+
+## Production Deployment
+
+The application is deployed on Render.
+
+- **Application hosting:** Render
+- **Production database:** Neon PostgreSQL
+- **Document storage:** Supabase Storage
+- **Document bucket:** `trustvault-documents` (private)
+
+Configure these environment variables in the Render service:
+
+| Variable | Purpose |
+|---|---|
+| `SECRET_KEY` | Flask application secret |
+| `FLASK_DEBUG` | Set to `0` in production |
+| `DATABASE_URL` | Neon PostgreSQL connection string |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SECRET_KEY` | Server-side Supabase secret key |
+| `SUPABASE_BUCKET` | `trustvault-documents` |
+
+The application applies database migrations during deployment.
+
+The deployed application uses HTTPS through its Render URL. Additional deployment hardening remains a future improvement.
+
+## Demo Accounts
+
+The challenge requires one evaluation account for each role. Create dedicated demo accounts and replace these placeholders with their actual credentials before submission.
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | demo-admin@example.com | Replace with demo-only password |
+| Owner | demo-owner@example.com | Replace with demo-only password |
+| Viewer | demo-viewer@example.com | Replace with demo-only password |
+
+**Security note:** These must be dedicated evaluation accounts containing only test data. Do not publish personal account credentials, production secrets, or database passwords. Because this repository is public, anyone can see these demo credentials.
 
 ## Automated Tests
 
@@ -159,9 +223,9 @@ Run the complete test suite:
 python -m pytest -q
 ```
 
-The latest recorded test run passed **60 tests**.
+**Latest verified test result: 61 passed.**
 
-The tests cover application basics, registration, login, roles, document operations, permissions, and audit integrity.
+The tests cover application basics, registration, login, roles, document operations, permissions, revoked access, upload validation, and audit integrity.
 
 ## Application Routes and Access Control
 
@@ -187,9 +251,11 @@ The tests cover application basics, registration, login, roles, document operati
 
 Unauthorized requests to protected operations should be rejected by server-side checks.
 
+For detailed endpoint documentation, including request parameters, permission requirements, and response codes, see `API.md`.
+
 ## Threat Model
 
-See [THREATS.md](THREATS.md) for the threat scenarios, security controls, testing approach, and accepted limitations.
+See [THREATS.md](THREATS.md) for threat scenarios, security controls, testing approach, and accepted limitations.
 
 ## AI Development Log
 
@@ -198,17 +264,23 @@ See [PROMPTS.md](PROMPTS.md) for the development prompt log, problems identified
 ## Project Limitations and Future Improvements
 
 Potential future improvements include:
+
 - Multi-factor authentication.
 - Login rate limiting.
 - Malware scanning for uploaded files.
-- Encryption at rest.
+- Additional application-managed encryption at rest.
 - External immutable audit-log backups and checkpoints.
-- Production HTTPS, deployment hardening, and backup/recovery procedures.
+- Additional production deployment hardening.
+- Backup and recovery procedures.
 
 ## Project Status
 
-This repository contains the TrustVault application and its automated tests. Production deployment and a public demo URL should be added here only after they have been verified.
+TrustVault is deployed and its main document-sharing workflow has been manually verified in production.
+
+Verified live operations include document upload, authorized download, permission revocation, rejection of revoked-user direct download requests, and admin audit log visibility.
+
+The latest local automated test run passed 61 tests.
 
 ## Repository
 
-[TrustVault on GitHub](https://github.com/yadavallimaheshwari3/TrustVault)
+https://github.com/yadavallimaheswari3/TrustVault
